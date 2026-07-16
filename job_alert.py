@@ -98,23 +98,42 @@ MAX_JOB_AGE_HOURS = 24  # only alert on jobs posted within this window (now appl
 # ============ FILTER LOGIC ============
 def parse_workday_posted_text(posted_text):
     """
-    Workday gives human-readable strings like 'Posted Today', 'Posted 2 Days Ago',
-    'Posted 30+ Days Ago'. Converts to an approximate ISO timestamp we can reuse
-    with the same is_fresh_job() check as Adzuna's real timestamps.
+    Handles human-readable relative time strings from various sources:
+    Workday ('Posted Today', 'Posted 2 Days Ago'), SerpAPI/Google Jobs
+    ('3 hours ago', 'Just posted', '2 weeks ago'), etc. Converts to an
+    approximate ISO timestamp reusable with is_fresh_job().
     """
     if not posted_text:
         return None
     posted_text = posted_text.lower()
     now = datetime.now(timezone.utc)
     try:
+        if "just posted" in posted_text or "just now" in posted_text:
+            return now.isoformat()
         if "today" in posted_text:
             return now.isoformat()
         if "yesterday" in posted_text:
             return (now - timedelta(days=1)).isoformat()
+
+        m = re.search(r"(\d+)\s*minute", posted_text)
+        if m:
+            return (now - timedelta(minutes=int(m.group(1)))).isoformat()
+
+        m = re.search(r"(\d+)\s*hour", posted_text)
+        if m:
+            return (now - timedelta(hours=int(m.group(1)))).isoformat()
+
         m = re.search(r"(\d+)\+?\s*day", posted_text)
         if m:
-            days = int(m.group(1))
-            return (now - timedelta(days=days)).isoformat()
+            return (now - timedelta(days=int(m.group(1)))).isoformat()
+
+        m = re.search(r"(\d+)\+?\s*week", posted_text)
+        if m:
+            return (now - timedelta(weeks=int(m.group(1)))).isoformat()
+
+        m = re.search(r"(\d+)\+?\s*month", posted_text)
+        if m:
+            return (now - timedelta(days=int(m.group(1)) * 30)).isoformat()
     except Exception:
         pass
     return None  # unrecognized format — treated as unknown, won't be blocked
@@ -576,6 +595,13 @@ def fetch_serpapi_jobs(query="data analyst"):
             posted_iso = None
             extensions = j.get("detected_extensions", {})
             posted_text = extensions.get("posted_at", "")
+            if not posted_text:
+                # Fallback: SerpAPI sometimes puts relative dates in a plain
+                # "extensions" list of strings instead (e.g. ["3 days ago", "Full-time"])
+                for ext in j.get("extensions", []):
+                    if re.search(r"(today|yesterday|\d+\s*(minute|hour|day|week|month))", ext.lower()):
+                        posted_text = ext
+                        break
             if posted_text:
                 posted_iso = parse_workday_posted_text(posted_text)  # handles "N days ago" style text
             jobs.append({
@@ -977,6 +1003,10 @@ def main():
 
     save_seen(seen)
     print(f"Done. Checked {checked} new jobs, {new_alerts} alerts sent.")
+
+
+if __name__ == "__main__":
+    main()
 
 
 if __name__ == "__main__":
