@@ -906,10 +906,13 @@ def main():
     # Adzuna — 1 page/run, stays under 250/month at 8 runs/day
     all_jobs.extend(fetch_adzuna_jobs(page=1))
 
-    # Eluta — re-enabled to test on GitHub Actions' Linux runner (the SSL issue
-    # was likely local Mac antivirus/network interference, may not occur here)
-    for kw in SEARCH_KEYWORDS:
-        all_jobs.extend(fetch_eluta_jobs(keyword=kw))
+    # Eluta — disabled again. Confirmed the SSL failure happens identically on
+    # GitHub Actions' Linux servers, ruling out local Mac network/antivirus as
+    # the cause. This points to Eluta blocking datacenter/cloud IP ranges
+    # (common anti-scraping defense) — would need a paid residential proxy to
+    # bypass, not worth it given 10 other working sources.
+    # for kw in SEARCH_KEYWORDS:
+    #     all_jobs.extend(fetch_eluta_jobs(keyword=kw))
 
     # Bank & company career pages — free, no limit
     all_jobs.extend(fetch_bank_jobs())
@@ -1003,10 +1006,6 @@ def main():
 
     save_seen(seen)
     print(f"Done. Checked {checked} new jobs, {new_alerts} alerts sent.")
-
-
-if __name__ == "__main__":
-    main()
 
 
 if __name__ == "__main__":
