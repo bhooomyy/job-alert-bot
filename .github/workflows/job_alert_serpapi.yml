@@ -5,6 +5,10 @@ on:
     - cron: '0 */8 * * *'   # every 8 hours (3x/day = ~90 calls/month, safely under SerpAPI's 100/month free limit)
   workflow_dispatch:         # lets you manually trigger a run from the Actions tab
 
+concurrency:
+  group: job-alert-serpapi
+  cancel-in-progress: false
+
 jobs:
   run-serpapi-alert:
     runs-on: ubuntu-latest
@@ -36,5 +40,8 @@ jobs:
           git config user.email "bot@users.noreply.github.com"
           git add seen_jobs_serpapi.json
           git commit -m "Update seen jobs (SerpAPI) [skip ci]" || echo "No changes to commit"
-          git pull --rebase origin main
-          git push
+          for i in 1 2 3 4 5; do
+            git pull --rebase origin main && git push && break
+            echo "Push attempt $i failed, retrying..."
+            sleep 5
+          done
