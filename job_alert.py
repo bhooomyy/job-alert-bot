@@ -30,7 +30,7 @@ ADZUNA_APP_KEY = os.environ.get("ADZUNA_APP_KEY")
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 
 CHAT_ID = "8828838638"
-SEEN_FILE = "seen_jobs.json"
+SEEN_FILE = os.environ.get("SEEN_FILE", "seen_jobs.json")
 DEBUG = True  # set False once tuned
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
