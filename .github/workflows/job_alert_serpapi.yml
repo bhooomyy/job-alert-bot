@@ -27,13 +27,14 @@ jobs:
         env:
           SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          SEEN_FILE: seen_jobs_serpapi.json
         run: python job_alert_serpapi.py
 
-      - name: Commit updated seen_jobs.json
+      - name: Commit updated seen_jobs_serpapi.json
         run: |
           git config user.name "job-alert-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add seen_jobs.json
+          git add seen_jobs_serpapi.json
           git commit -m "Update seen jobs (SerpAPI) [skip ci]" || echo "No changes to commit"
           git pull --rebase origin main
           git push
